@@ -37,7 +37,7 @@ public class MSDFAtlasGenerator : EditorWindow
 
     public bool UseTextureCompression = false;
 
-    private const string MSDFGenPath = "Assets/Merlin/MSDF/bin/msdfgen.exe";
+    private const string MSDFGenPath = "Assets/Merlin/bin/msdfgen.exe";
     private const string MSDFTempPath = "Assets/Merlin/MSDF/gen/glyph{0}.png";
 
     [MenuItem("Window/Merlin/MSDF Font Generator")]
@@ -190,15 +190,27 @@ public class MSDFAtlasGenerator : EditorWindow
         msdfProcess.StartInfo.FileName = Path.GetFullPath(MSDFGenPath);
         msdfProcess.EnableRaisingEvents = true;
 
+#if UNITY_EDITOR_LINUX
+        msdfProcess.StartInfo.FileName = "/usr/bin/wine";
+#endif
+
         string fontPath = Path.GetFullPath(AssetDatabase.GetAssetPath(FontToConvert));
         //string glyphLocalPath = string.Format(MSDFTempPath, UTFChar);
         string glyphLocalPath = string.Format(MSDFTempPath, 0);
         string glyphPath = Path.GetFullPath(glyphLocalPath);
 
+#if UNITY_EDITOR_LINUX
+        fontPath = "Z:" + fontPath.Replace("/", "\\");
+        glyphPath = "Z:" + glyphPath.Replace("/", "\\");
+#endif
         Directory.CreateDirectory(Path.GetDirectoryName(string.Format(MSDFTempPath, 0)));
         string argStr = string.Format("msdf -o \"{0}\" -font \"{1}\" {4} -size {2} {3} -pxrange 4 -autoframe", glyphPath, fontPath, glyphWidth, glyphHeight, UTFChar);
 
         msdfProcess.StartInfo.Arguments = argStr;
+
+#if UNITY_EDITOR_LINUX
+        msdfProcess.StartInfo.Arguments = MSDFGenPath + " " + argStr;
+#endif
 
         msdfProcess.Start();
         msdfProcess.WaitForExit();
