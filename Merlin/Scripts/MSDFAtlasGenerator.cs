@@ -92,7 +92,8 @@ public class MSDFAtlasGenerator : EditorWindow
         fontImporter.SaveAndReimport();
 
         // Hacky method to get the generated font texture so that we can figure out where to put pixels
-        Texture2D fontTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GetAssetPath(FontToConvert));
+        //Texture2D fontTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GetAssetPath(FontToConvert));
+        Texture2D fontTexture = new Texture2D(512, 512, TextureFormat.ARGB32, false, true);
         Texture2D newAtlas = new Texture2D(fontTexture.width, fontTexture.height, TextureFormat.ARGB32, false, true);
 
         ProcessAtlas(fontTexture, newAtlas, new RectInt(0, 0, fontTexture.width, fontTexture.height));
@@ -124,7 +125,27 @@ public class MSDFAtlasGenerator : EditorWindow
     void ProcessAtlas(Texture2D fontTexture, Texture2D newAtlas, RectInt updateQuad) {
         Dictionary<CharacterInfo, Texture2D> characterGlyphMap = new Dictionary<CharacterInfo, Texture2D>();
 
-        CharacterInfo[] characterInfos = FontToConvert.characterInfo;
+        CharacterInfo[] characterInfos = new CharacterInfo[256]; // = FontToConvert.characterInfo;
+
+        for (int indx = 0; indx < 256; indx++)
+        {
+            //CharacterInfo newChar = new CharacterInfo();
+            //characterInfos.AddItem(newChar);
+            characterInfos[indx].index = indx > 32 && indx < 127 ? indx : 32;
+            characterInfos[indx].glyphWidth = 32;
+            characterInfos[indx].glyphHeight = 32;
+
+            float charSize = 32.0f / 512.0f;
+            Vector2Int charID = new Vector2Int(indx % 16, indx / 16);
+            Vector2 charCoord = new Vector2((float)charID.x * charSize, (float)charID.y * charSize);
+            //charCoord = Vector2.zero;
+
+            characterInfos[indx].uvBottomLeft = charCoord + new Vector2(0.0f, 0.0f);
+            characterInfos[indx].uvBottomRight = charCoord + new Vector2(charSize, 0.0f);
+
+            characterInfos[indx].uvTopLeft = charCoord + new Vector2(0.0f, charSize);
+            characterInfos[indx].uvTopRight = charCoord + new Vector2(charSize, charSize);
+        }
 
         for (int x = 0; x < updateQuad.width; ++x)
         {
@@ -204,7 +225,7 @@ public class MSDFAtlasGenerator : EditorWindow
         glyphPath = "Z:" + glyphPath.Replace("/", "\\");
 #endif
         Directory.CreateDirectory(Path.GetDirectoryName(string.Format(MSDFTempPath, 0)));
-        string argStr = string.Format("msdf -o \"{0}\" -font \"{1}\" {4} -size {2} {3} -pxrange 4 -autoframe", glyphPath, fontPath, glyphWidth, glyphHeight, UTFChar);
+        string argStr = string.Format("msdf -o \"{0}\" -font \"{1}\" {4} -dimensions {2} {3} -pxrange 4 -emnormalize -scale 35.0 -translate 0.2 0.2", glyphPath, fontPath, glyphWidth, glyphHeight, UTFChar);
 
         msdfProcess.StartInfo.Arguments = argStr;
 
